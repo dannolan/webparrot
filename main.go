@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/webparrot/handlers"
+	"github.com/dannolan/webparrot/handlers"
 )
 
 func main() {
