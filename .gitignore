@@ -20,4 +20,5 @@
 /Godeps/
 
 webparrot
+buildme.sh
 # End of https://www.gitignore.io/api/go
