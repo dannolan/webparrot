@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -23,15 +23,37 @@ type ParrotResponse struct {
 	Meta       map[string]interface{} `json:"meta,omitempty"`
 }
 
-func forwardedIP(r *http.Request) (string, error) {
-	forwarded := r.Header.Get("X-Forwarded-For")
-	if len(forwarded) == 0 {
-		return "", errors.New("No forwarded IP provided")
+// FromRequest return client's real public IP address from http request headers.
+// shamelessly nicked from here and changed - https://github.com/tomasen/realip/blob/master/realip.go
+func FromRequest(r *http.Request) string {
+	// Fetch header value
+	xRealIP := r.Header.Get("X-Real-Ip")
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	// If both empty, return IP from remote address
+	if len(xRealIP) == 0 && len(xForwardedFor) == 0 {
+		var remoteIP string
+		// If there are colon in remote address, remove the port number
+		// otherwise, return remote address as is
+		if strings.ContainsRune(r.RemoteAddr, ':') {
+			remoteIP, _, _ = net.SplitHostPort(r.RemoteAddr)
+		} else {
+			remoteIP = r.RemoteAddr
+		}
+
+		return remoteIP
 	}
-	items := strings.Split(forwarded, ",")
-	// Technically this validates that it's actually an IP
-	ip := net.ParseIP(items[0])
-	return ip.String(), nil
+
+	fmt.Println("checking x forwarded for")
+	// Check list of IP in X-Forwarded-For and return the first global address
+	for _, address := range strings.Split(xForwardedFor, ",") {
+		address = strings.TrimSpace(address)
+		if address != "" {
+			return address
+		}
+
+	}
+	// If nothing succeed, return X-Real-IP
+	return xRealIP
 }
 
 func (p ParrotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,10 +61,7 @@ func (p ParrotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	remoteAddress := r.RemoteAddr
 	host := r.Host
-	ip, err := forwardedIP(r)
-	if err != nil {
-		ip = remoteAddress
-	}
+	ip := FromRequest(r)
 	headers := make(map[string]interface{})
 	for k, v := range r.Header {
 		if len(v) > 0 {
