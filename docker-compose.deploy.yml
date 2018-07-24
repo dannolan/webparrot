@@ -9,6 +9,6 @@ services:
       - '443:443'
     volumes:
       - ~/certs:/certs
-    env:
+    environment:
       - PRODUCTION_ENV=true
       - PRODUCTION_DOMAIN=parrot.postapp.biz
