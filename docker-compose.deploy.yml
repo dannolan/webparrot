@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+  webparrot:
+    restart: 'always'
+    build: '.'
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ~/certs:/certs
+    env:
+      - PRODUCTION_ENV=true
+      - PRODUCTION_DOMAIN=parrot.postapp.biz
